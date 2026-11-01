@@ -1,9 +1,9 @@
 // client/src/pages/JobDetails.jsx
-// Detailed Job view displaying comprehensive specifications, employer profile, and Phase 3 application modal
+// Detailed Job view displaying comprehensive specifications, employer profile, and live Job Application flow
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getJobById } from '../services/api';
+import { getJobById, submitApplication, getMyApplications } from '../services/api';
 import {
   Briefcase,
   Building2,
@@ -20,19 +20,37 @@ import {
   Laptop,
   AlertCircle,
   Sparkles,
-  Info,
+  Upload,
+  FileText,
+  X,
+  Check,
+  Send,
+  UserCheck,
 } from 'lucide-react';
 
 export default function JobDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showApplyModal, setShowApplyModal] = useState(false);
 
+  // Application state
+  const [existingApplication, setExistingApplication] = useState(null);
+  const [checkingApp, setCheckingApp] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+
+  // Application form state
+  const [resumeFile, setResumeFile] = useState(null);
+  const [coverLetter, setCoverLetter] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [applyError, setApplyError] = useState('');
+  const [applySuccess, setApplySuccess] = useState(false);
+
+  // Fetch job details and check existing application
   useEffect(() => {
     const fetchJob = async () => {
       try {
@@ -54,6 +72,104 @@ export default function JobDetails() {
 
     fetchJob();
   }, [id]);
+
+  // Check if candidate already applied to this position
+  useEffect(() => {
+    const checkUserApplication = async () => {
+      if (!isAuthenticated || !user || user.role !== 'user') return;
+      try {
+        setCheckingApp(true);
+        const res = await getMyApplications();
+        if (res && res.applications) {
+          const matched = res.applications.find(
+            (app) => String(app.job?._id || app.job) === String(id)
+          );
+          if (matched) {
+            setExistingApplication(matched);
+          }
+        }
+      } catch (err) {
+        console.warn('Check application notice:', err.message);
+      } finally {
+        setCheckingApp(false);
+      }
+    };
+
+    checkUserApplication();
+  }, [id, isAuthenticated, user]);
+
+  // Handle Resume File Selection with PDF validation
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setApplyError('');
+    if (!file) {
+      setResumeFile(null);
+      return;
+    }
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setApplyError('Only PDF documents (.pdf) are accepted.');
+      setResumeFile(null);
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setApplyError('Resume file size exceeds the 5 MB maximum limit.');
+      setResumeFile(null);
+      e.target.value = '';
+      return;
+    }
+
+    setResumeFile(file);
+  };
+
+  // Submit Job Application
+  const handleSubmitApplication = async (e) => {
+    e.preventDefault();
+    if (!resumeFile) {
+      setApplyError('Please select your PDF resume file to submit.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setApplyError('');
+
+      const formData = new FormData();
+      formData.append('jobId', id);
+      formData.append('resume', resumeFile);
+      formData.append('coverLetter', coverLetter.trim());
+
+      const res = await submitApplication(formData);
+      if (res && res.success) {
+        setApplySuccess(true);
+        setExistingApplication(res.application);
+        setTimeout(() => {
+          setShowApplyModal(false);
+          setApplySuccess(false);
+        }, 2200);
+      } else {
+        throw new Error(res?.message || 'Failed to submit application');
+      }
+    } catch (err) {
+      setApplyError(err?.message || 'Failed to submit application. Please check your credentials.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleApplyClick = () => {
+    if (!isAuthenticated) {
+      setShowAuthPrompt(true);
+      return;
+    }
+    if (user.role === 'employer') {
+      alert('Employer accounts cannot apply to jobs. Please sign in as a Job Seeker.');
+      return;
+    }
+    setShowApplyModal(true);
+  };
 
   if (loading) {
     return (
@@ -100,9 +216,20 @@ export default function JobDetails() {
     employer = {},
     status = 'open',
     createdAt,
-    updatedAt,
   } = job;
 
+  const companySlug =
+    job.companySlug ||
+    (company
+      ? company
+          .toLowerCase()
+          .trim()
+          .replace(/[^\w\s-]/g, '')
+          .replace(/[\s_-]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      : null);
+
+  const isClosed = status === 'closed';
   const isOwnerOrAdmin =
     user && (user.role === 'admin' || String(employer?._id || employer) === String(user.id || user._id));
 
@@ -113,6 +240,24 @@ export default function JobDetails() {
         year: 'numeric',
       })
     : 'Recent';
+
+  // Status color helper for candidate
+  const getStatusBadge = (s) => {
+    switch (s) {
+      case 'Shortlisted':
+        return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+      case 'Interview Scheduled':
+        return 'bg-purple-500/15 text-purple-300 border-purple-500/30';
+      case 'Hired':
+        return 'bg-teal-500/15 text-teal-300 border-teal-500/30';
+      case 'Under Review':
+        return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+      case 'Rejected':
+        return 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+      default:
+        return 'bg-blue-500/15 text-blue-300 border-blue-500/30';
+    }
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
@@ -148,7 +293,7 @@ export default function JobDetails() {
                 <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                   {title}
                 </h1>
-                {status === 'closed' && (
+                {isClosed && (
                   <span className="text-xs uppercase font-bold px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40">
                     Closed
                   </span>
@@ -173,19 +318,43 @@ export default function JobDetails() {
             </div>
           </div>
 
-          {/* Apply CTA Button */}
+          {/* Action Zone: Apply Button or Already Applied Badge */}
           <div className="shrink-0 flex flex-col sm:items-end gap-2">
-            <button
-              onClick={() => setShowApplyModal(true)}
-              disabled={status === 'closed'}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all active:scale-95"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Apply for this Position</span>
-            </button>
-            <span className="text-[11px] text-slate-500 text-center sm:text-right block">
-              1-Click Application (Phase 3)
-            </span>
+            {existingApplication ? (
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-700/80 space-y-1.5 sm:text-right">
+                <div className="flex items-center sm:justify-end gap-1.5 text-xs text-slate-400">
+                  <UserCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Application Submitted</span>
+                </div>
+                <span
+                  className={`inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full border ${getStatusBadge(
+                    existingApplication.status
+                  )}`}
+                >
+                  Status: {existingApplication.status}
+                </span>
+                <Link
+                  to="/dashboard/user"
+                  className="block text-[11px] text-indigo-400 hover:underline"
+                >
+                  View in My Dashboard &rarr;
+                </Link>
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={handleApplyClick}
+                  disabled={isClosed}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all active:scale-95"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{isClosed ? 'Listing Closed' : 'Apply for this Position'}</span>
+                </button>
+                <span className="text-[11px] text-slate-500 text-center sm:text-right block">
+                  {isClosed ? 'Applications no longer accepted' : 'PDF Resume Required &bull; Max 5MB'}
+                </span>
+              </>
+            )}
           </div>
         </div>
 
@@ -283,9 +452,31 @@ export default function JobDetails() {
 
           {/* About Employer Card */}
           <div className="glass-card p-6 space-y-4">
-            <h3 className="text-sm font-bold text-white">About the Company</h3>
+            <h3 className="text-sm font-bold text-white flex items-center justify-between">
+              <span>About the Company</span>
+              {companySlug && (
+                <Link
+                  to={`/companies/${companySlug}`}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 hover:underline font-semibold"
+                >
+                  <span>Company Profile</span>
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              )}
+            </h3>
             <div className="space-y-2 text-xs text-slate-300">
-              <div className="font-semibold text-white text-base">{company}</div>
+              <div className="font-semibold text-white text-base">
+                {companySlug ? (
+                  <Link
+                    to={`/companies/${companySlug}`}
+                    className="hover:text-indigo-300 hover:underline transition-colors"
+                  >
+                    {company}
+                  </Link>
+                ) : (
+                  company
+                )}
+              </div>
               {employer?.companyDescription && (
                 <p className="text-slate-400 leading-relaxed">
                   {employer.companyDescription}
@@ -324,36 +515,181 @@ export default function JobDetails() {
         </div>
       </div>
 
-      {/* Phase 3 Application Placeholder Modal */}
+      {/* Live Job Application Submission Modal */}
       {showApplyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-md bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl p-6 space-y-5">
-            <div className="w-12 h-12 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 flex items-center justify-center mx-auto">
-              <Sparkles className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl p-6 space-y-5 my-8">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400">
+                  <Send className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Apply for Position</h3>
+                  <p className="text-xs text-slate-400">
+                    {title} &bull; {company}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowApplyModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                aria-label="Close application modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="text-center space-y-2">
-              <h3 className="text-lg font-bold text-white">Application Flow Ready for Phase 3</h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Direct resume submissions and applicant tracking will unlock in <strong>Phase 3</strong>.
-                Ensure your primary resume (PDF/DOCX) is uploaded in your profile to apply with 1 click.
+            {/* Success Animation */}
+            {applySuccess ? (
+              <div className="py-8 text-center space-y-3">
+                <div className="w-14 h-14 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto animate-bounce">
+                  <Check className="w-8 h-8" />
+                </div>
+                <h4 className="text-lg font-bold text-white">Application Submitted!</h4>
+                <p className="text-xs text-slate-300 max-w-xs mx-auto">
+                  Your PDF resume and details were successfully received by {company}. You can track
+                  status updates in your dashboard.
+                </p>
+              </div>
+            ) : (
+              /* Application Form */
+              <form onSubmit={handleSubmitApplication} className="space-y-4">
+                {applyError && (
+                  <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{applyError}</span>
+                  </div>
+                )}
+
+                {/* Resume Upload Dropzone */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Upload Resume (PDF format, max 5 MB) <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="border-2 border-dashed border-slate-700 hover:border-indigo-500/60 rounded-xl p-4 text-center transition-colors bg-slate-950/50">
+                    <input
+                      type="file"
+                      id="resume-upload"
+                      accept=".pdf,application/pdf"
+                      onChange={handleFileChange}
+                      required
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="resume-upload"
+                      className="cursor-pointer flex flex-col items-center justify-center gap-2"
+                    >
+                      <div className="p-2.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      {resumeFile ? (
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-bold text-emerald-400 flex items-center gap-1 justify-center">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>{resumeFile.name}</span>
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            {(resumeFile.size / (1024 * 1024)).toFixed(2)} MB &bull; Click to change
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <p className="text-xs text-slate-300 font-semibold">
+                            Click to browse or drop your PDF resume here
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            Protected from public access. Strictly visible to hiring managers only.
+                          </p>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                </div>
+
+                {/* Cover Letter */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Cover Letter / Note to Recruiter (Optional)
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={coverLetter}
+                    onChange={(e) => setCoverLetter(e.target.value)}
+                    placeholder="Highlight your key achievements, why you're a great fit for this team, and your availability..."
+                    className="w-full bg-slate-950/70 border border-slate-800 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all resize-none"
+                  />
+                </div>
+
+                {/* Candidate Info Pill */}
+                <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400 space-y-0.5">
+                  <div>
+                    Applying as: <strong className="text-white">{user?.name}</strong> ({user?.email})
+                  </div>
+                  <div>Duplicate applications to the same role are automatically prevented.</div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowApplyModal(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting || !resumeFile}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all active:scale-95"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{submitting ? 'Submitting Application...' : 'Send Application'}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Guest Authentication Prompt Modal */}
+      {showAuthPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-sm bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl p-6 text-center space-y-4">
+            <div className="w-12 h-12 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 flex items-center justify-center mx-auto">
+              <Briefcase className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-white">Sign In to Apply</h3>
+              <p className="text-xs text-slate-300">
+                You need a verified Job Seeker account to upload your resume and apply to "{title}".
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 space-y-1">
-              <div className="text-slate-300 font-semibold">Position Selected:</div>
-              <div className="text-white font-mono">{title}</div>
-              <div className="text-indigo-400">{company} &bull; {location}</div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="grid grid-cols-2 gap-2.5 pt-2">
               <button
-                onClick={() => setShowApplyModal(false)}
-                className="w-full px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/25 transition-all"
+                onClick={() => navigate('/login', { state: { from: { pathname: `/jobs/${id}` } } })}
+                className="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold border border-slate-700 transition-colors"
               >
-                Got It
+                Sign In
+              </button>
+              <button
+                onClick={() => navigate('/register')}
+                className="py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/25 transition-all"
+              >
+                Register
               </button>
             </div>
+
+            <button
+              onClick={() => setShowAuthPrompt(false)}
+              className="text-[11px] text-slate-500 hover:text-slate-300"
+            >
+              Continue Browsing
+            </button>
           </div>
         </div>
       )}

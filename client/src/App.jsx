@@ -13,10 +13,13 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Jobs from './pages/Jobs';
 import JobDetails from './pages/JobDetails';
+import Companies from './pages/Companies';
+import CompanyDetails from './pages/CompanyDetails';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import UserDashboard from './pages/dashboards/UserDashboard';
 import EmployerDashboard from './pages/dashboards/EmployerDashboard';
+import CompanyDashboard from './pages/dashboards/CompanyDashboard';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
 import NotFound from './pages/NotFound';
 
@@ -44,6 +47,8 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/jobs/:id" element={<JobDetails />} />
+              <Route path="/companies" element={<Companies />} />
+              <Route path="/companies/:slug" element={<CompanyDetails />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
 
@@ -73,6 +78,16 @@ export default function App() {
                 element={
                   <ProtectedRoute allowedRoles={['employer', 'admin']}>
                     <EmployerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* 2b. Employer Protected Company Branding Dashboard */}
+              <Route
+                path="/dashboard/company"
+                element={
+                  <ProtectedRoute allowedRoles={['employer', 'admin']}>
+                    <CompanyDashboard />
                   </ProtectedRoute>
                 }
               />

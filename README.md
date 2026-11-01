@@ -47,25 +47,80 @@ A modern, production-grade full-stack Job Portal web application built with the 
   - `DELETE /api/jobs/:id`: Private endpoint with ownership check to permanently delete a listing.
 - ✅ **Database & Fallback Persistence**:
   - Full MongoDB Mongoose support.
-  - Seamless in-memory fallback store (`inMemoryJobs`) pre-seeded with 6 rich tech positions for demo employers.
+  - Seamless in-memory fallback store pre-seeded with rich tech positions.
   - Ownership protection enforced in both MongoDB and in-memory modes.
-- ✅ **Public Job Listing Page** (`client/src/pages/Jobs.jsx`):
-  - Real-time search by keyword, title, skills, and description.
-  - Location search filter.
-  - Select filters for Job Type, Work Mode (`Remote`, `Hybrid`, `On-Site`), and Experience level.
-  - Server-side pagination controls with active page indicator.
-  - Elegant skeleton loading states and empty state with 1-click filter reset.
-- ✅ **Job Details Page** (`client/src/pages/JobDetails.jsx`):
-  - Comprehensive view of salary, experience, work mode, and posted dates.
-  - Full role overview, key responsibilities list, and qualifications list.
-  - Desired tech stack pills and employer profile sidebar.
-  - "Apply for this Position" action button with Phase 3 informational placeholder modal.
-- ✅ **Employer Dashboard Real-Time Integration** (`client/src/pages/dashboards/EmployerDashboard.jsx`):
-  - Real stats cards: Total Postings, Active (Open), Closed, and Plan tier.
-  - Interactive job management table with responsive layout.
-  - Actions: View Public Details, Edit (pre-populated modal), Close/Reopen status toggle, and Delete.
-  - Destructive action confirmation dialogs.
-  - "Post New Job Listing" button integrated with enhanced `AddJobModal`.
+
+### Phase 3: Complete Job Application Management System
+- ✅ **Application Model** (`server/models/Application.js`):
+  - Fields: `job` (ref: `Job`), `applicant` (ref: `User`), `employer` (ref: `User`), `resume` (safe file path), `coverLetter` (String), `status` (Enum: `'Applied'`, `'Under Review'`, `'Shortlisted'`, `'Interview Scheduled'`, `'Hired'`, `'Rejected'`), `interviewDate`, `interviewNotes`, `appliedAt`, `updatedAt`.
+  - Compound unique index on `{ job: 1, applicant: 1 }` preventing duplicate applications from the same candidate.
+- ✅ **Protected Resume Storage via Multer** (`server/middleware/uploadMiddleware.js`):
+  - Stored outside public static routes in `server/secure_uploads/resumes/`.
+  - PDF format only (`application/pdf`), maximum 5 MB limit.
+  - MIME type and file extension verification with crypto-safe unique filename generation.
+- ✅ **Complete Application REST APIs** (`server/routes/applicationRoutes.js`, `server/controllers/applicationController.js`):
+  - `POST /api/applications`: Authenticated job seeker application flow with resume PDF upload, closed-job check, and duplicate check.
+  - `GET /api/applications/me`: Candidate view of their own application history with pipeline statistics.
+  - `GET /api/applications/:id`: Detailed view of a single application with ownership verification.
+  - `GET /api/applications/job/:jobId`: Hiring employer / Admin view of applicants for a specific job listing.
+  - `GET /api/applications/employer`: Overview of all applicants across the employer's active jobs with pipeline metrics.
+  - `GET /api/applications/:id/resume`: Protected resume streaming endpoint verifying that `req.user` is the candidate, the hiring employer, or an admin.
+  - `PATCH /api/applications/:id/status`: Employer-controlled status progression (`Applied` → `Under Review` → `Shortlisted` → `Interview Scheduled` → `Hired` / `Rejected`) with optional interview date/notes.
+  - `DELETE /api/applications/:id`: Application withdrawal (candidate) or removal (admin) with file cleanup.
+- ✅ **In-App Notification System** (`server/models/Notification.js`, `server/controllers/notificationController.js`, `server/routes/notificationRoutes.js`):
+  - Automated triggers on Application submission, Candidate Shortlisting, Interview Scheduling, Rejection, and Hiring.
+  - `GET /api/notifications`: Retrieve unread and recent notifications.
+  - `PATCH /api/notifications/:id/read` & `PATCH /api/notifications/read-all`: Mark alerts read.
+- ✅ **Job Seeker Dashboard** (`client/src/pages/dashboards/UserDashboard.jsx`):
+  - 6 pipeline metric cards: Total Applications, Under Review, Shortlisted, Interviews, Hired, Rejected.
+  - Comprehensive application history table with company, job title, date, live badge, and actions.
+  - Application inspection modal and confirmation dialog for application withdrawal.
+- ✅ **Employer Dashboard** (`client/src/pages/dashboards/EmployerDashboard.jsx`):
+  - Applicant pipeline counters: Total Applicants, New Applications, Shortlisted, Interviews, Hired.
+  - Filterable candidate table (by status and search).
+  - Review candidate profile & cover letter modal.
+  - Secure PDF resume viewer launcher.
+  - Status progression actions (Shortlist, Schedule Interview modal with date/time and notes, Hire, Reject).
+- ✅ **Live Apply Modal on Job Details** (`client/src/pages/JobDetails.jsx`):
+  - PDF drag-and-drop / file selector with size and type validation.
+  - Cover letter text area.
+  - Pre-submission checks (unauthenticated redirect, role check, closed job prevention, duplicate application banner).
+- ✅ **Interactive Navbar Notification Bell** (`client/src/components/Navbar.jsx`):
+  - Real-time polling with unread badge count.
+  - Dropdown popover with quick status alerts and one-click "Mark all as read".
+### Phase 4: Company Profiles, Employer Branding & Verification
+- ✅ **Company Model** (`server/models/Company.js`):
+  - Fields: `name`, `slug` (unique lowercase URL-safe slug), `logo`, `coverImage`, `industry`, `companySize`, `website`, `location`, `description`, `foundedYear`, `socialLinks` (`linkedin`, `twitter`, `github`, `facebook`), `employer` (ref: `User`), `verificationStatus` (Enum: `'pending'`, `'verified'`, `'rejected'`), `verifiedAt`, `rejectionReason`, timestamps.
+  - Full-text indexes and slug auto-generation helper.
+- ✅ **Company Image Uploads via Multer** (`server/middleware/companyUploadMiddleware.js`):
+  - Supports Logo & Cover image upload (`JPG`, `PNG`, `WebP`).
+  - Strict 5 MB file size limit and MIME-type / extension verification.
+  - Stored in publicly accessible `server/uploads/companies/` directory with unique safe filenames.
+- ✅ **Complete Company REST APIs** (`server/routes/companyRoutes.js`, `server/controllers/companyController.js`):
+  - `POST /api/companies`: Private (`employer`, `admin`) to create profile with logo/cover; initial status always `pending`.
+  - `GET /api/companies`: Public listing with keyword search, industry filter, verification status filter, and pagination.
+  - `GET /api/companies/:slug`: Public single company profile by slug, populated with active job openings from this employer.
+  - `GET /api/companies/me`: Private (`employer`, `admin`) to retrieve the authenticated employer's company profile.
+  - `PUT /api/companies/me`: Private (`employer`, `admin`) to update company profile and branding images (strictly blocks self-verification).
+  - `PATCH /api/companies/:id/verification`: Private (`admin` only) to verify or reject company profiles with feedback reason and automated notifications.
+- ✅ **Public Company Pages**:
+  - `client/src/pages/Companies.jsx` (`/companies`): Searchable and filterable directory of employers with verified badges.
+  - `client/src/pages/CompanyDetails.jsx` (`/companies/:slug`): Public profile showcasing logo, cover image, verified badge, headquarters, size, about overview, social links, and live active job openings.
+- ✅ **Employer Company Dashboard** (`client/src/pages/dashboards/CompanyDashboard.jsx`):
+  - Route: `/dashboard/company`
+  - Logo and Cover banner upload with real-time browser preview.
+  - Company overview editor (name, industry, size, location, website, founded year, description, social profiles).
+  - Prominent verification status banner (`Verified`, `Pending Review`, `Rejected` with feedback).
+  - "Preview Public Profile" direct link button.
+- ✅ **Admin Verification Command Center** (`client/src/pages/dashboards/AdminDashboard.jsx`):
+  - Real-time counters: Pending Verifications, Verified Companies, Rejected Verifications, and Rejected Applications.
+  - Company verification review table with status filter.
+  - Interactive Review Details modal and Confirmation Dialogs for verifying or rejecting with reason.
+- ✅ **Job Integration**:
+  - Company names and avatars in `JobCard.jsx` and `JobDetails.jsx` dynamically link to `/companies/:slug`.
+- ✅ **Dual Database & In-Memory Fallback Persistence**:
+  - Pre-seeded in-memory companies for TechCorp Solutions (`verified`) and Cloud Innovate Labs (`pending`).
+  - Seamless fallback support across all endpoints and filters.
 
 ---
 
@@ -78,7 +133,8 @@ Test the application immediately using the pre-seeded credentials (or click the 
 | **👑 Admin** | `admin@jobportal.com` | `admin123` | `/dashboard/admin` |
 | **🏢 Employer 1** | `employer@techcorp.com` | `employer123` | `/dashboard/employer` |
 | **🏢 Employer 2** | `hiring@cloudinnovate.com` | `employer123` | `/dashboard/employer` |
-| **💼 Job Seeker** | `alex@example.com` | `user123` | `/dashboard/user` |
+| **💼 Job Seeker (Alex)** | `alex@example.com` | `user123` | `/dashboard/user` |
+| **💼 Job Seeker (Emily)** | `emily@example.com` | `user123` | `/dashboard/user` |
 
 ---
 
@@ -96,37 +152,52 @@ npm run dev
 npm run build
 ```
 
-### 3. Run Automated System Test Suite
+### 3. Run Automated System Test Suite (All 16 Phase 3 Scenarios)
 ```bash
-node /home/a/.gemini/antigravity-ide/brain/8bfec0d3-ffde-4c53-a231-05de34d7fe6f/scratch/test_job_system.js
+npm test
+```
+Or directly:
+```bash
+node server/tests/phase3.test.js
 ```
 
 ---
 
 ## 🧪 Step-by-Step Feature Testing Guide
 
-### Scenario 1: Browse Public Jobs & Filter
-1. Navigate to `http://localhost:5173/jobs` (or click **"Browse Jobs"** in the navigation bar).
-2. Type `React` in the search box — notice the list instantly filters to matching positions.
-3. Select **Work Mode: Remote** — notice only remote jobs are displayed.
-4. Click on any job card or **"View Details & Requirements"** to open the full job page (`/jobs/:id`).
-5. Click **"Apply for this Position"** to verify the Phase 3 application modal pops up.
+### Scenario 1: Job Seeker Applies to a Position
+1. Log in as **Job Seeker (Alex)** (`alex@example.com`) or click the demo button.
+2. Go to **"Browse Jobs"** (`/jobs`) and click on any open position (e.g. `UI/UX Product Designer`).
+3. Click **"Apply for this Position"**.
+4. Attach a PDF resume (max 5 MB) and enter a cover letter.
+5. Click **"Submit Application"**. Verify the modal confirms submission and displays the updated status badge.
+6. Open `/dashboard/user` — verify the application appears in your history table and application metrics increment.
 
-### Scenario 2: Employer Job Management & Posting
-1. Go to `/login` and click the **"Employer"** quick demo button (`employer@techcorp.com`).
-2. You will be automatically redirected to `/dashboard/employer`.
-3. Notice the real metrics: Total Postings, Active Postings, and Closed Postings.
-4. Click **"Post New Job Listing"** in the banner or above the table.
-5. Fill in the job details (e.g. Title: `Principal Cloud Architect`, Location: `San Francisco, CA`, Work Mode: `Remote`, Description, etc.) and click **Publish Job Listing**.
-6. The new job listing immediately appears in your table and the counters update in real time.
-7. Click the **Close / Reopen** power icon on the job row to toggle its status to Closed.
-8. Switch to the public `/jobs` page — verify that the closed job is automatically hidden from public visitors.
-9. Click **Edit** on your job to update compensation or requirements.
-10. Click **Delete** to remove the listing after confirming the modal prompt.
+### Scenario 2: Duplicate Prevention & Closed Job Guard
+1. Navigate back to the same job page where you just applied.
+2. Notice the button displays **"Already Applied"** with your current status.
+3. If an unauthenticated user or employer clicks apply, proper role guards prevent invalid submissions.
+4. Try applying to a closed job — the system rejects the submission with a clear error.
 
-### Scenario 3: Authorization & Security Verification
-1. Log in as a **Job Seeker** (`alex@example.com`).
-2. Try sending a `POST /api/jobs` request — verify it is intercepted and rejected with `403 Forbidden`.
-3. Log in as **Employer 2** (`hiring@cloudinnovate.com`).
-4. Try modifying or deleting a job created by **Employer 1** — verify it is rejected with `403 Forbidden (Access denied)`.
-5. Log in as **Admin** (`admin@jobportal.com`) — verify the admin can manage all platform listings and inspect open jobs.
+### Scenario 3: Employer Reviews Candidates & Updates Pipeline
+1. Log in as **Employer 1** (`employer@techcorp.com`).
+2. Navigate to `/dashboard/employer`.
+3. In the **"Candidate Pipeline & Applications"** section, review incoming candidates.
+4. Click **"View Details"** to inspect the candidate's profile, cover letter, and contact info.
+5. Click **"View Resume (PDF)"** to securely stream the candidate's protected resume.
+6. Click **"Shortlist"** or **"Schedule Interview"** (enter interview date, time, and instructions).
+7. Confirm status changes — the candidate table and pipeline metric counters update immediately.
+
+### Scenario 4: Notifications & Candidate Status Updates
+1. When Employer 1 shortlists Alex or schedules an interview, a notification is generated.
+2. Log back in as **Alex Rivera** (`alex@example.com`).
+3. Check the **Notification Bell** in the top navigation bar — notice the unread count badge.
+4. Click the bell to view the update (e.g., *"Interview Scheduled: TechCorp scheduled an interview for UI/UX Product Designer"*).
+5. Open `/dashboard/user` to see the updated status badge.
+
+### Scenario 5: Security & Ownership Protection
+1. Log in as **Employer 2** (`hiring@cloudinnovate.com`).
+2. Attempt to view applicants or download resumes for jobs belonging to **Employer 1** (`employer@techcorp.com`).
+3. Verify that requests are blocked with `403 Forbidden`.
+4. Verify that candidates cannot alter application statuses (`PATCH /api/applications/:id/status` returns `403 Forbidden`).
+

@@ -948,4 +948,6 @@ module.exports = {
   updateJob,
   toggleJobStatus,
   deleteJob,
+  inMemoryJobs,
 };
+

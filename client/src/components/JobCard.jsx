@@ -96,6 +96,18 @@ export default function JobCard({
     );
   };
 
+  // Company slug calculation for public profile linking
+  const companySlug =
+    job.companySlug ||
+    (company
+      ? company
+          .toLowerCase()
+          .trim()
+          .replace(/[^\w\s-]/g, '')
+          .replace(/[\s_-]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      : null);
+
   return (
     <div className="glass-card glass-card-hover p-4 xs:p-5 md:p-6 transition-all duration-200 group flex flex-col justify-between">
       <div>
@@ -103,11 +115,23 @@ export default function JobCard({
           {/* Left Section: Company Icon & Job Details */}
           <div className="flex items-start gap-3.5 flex-1">
             {/* Company Avatar / Logo */}
-            <div className="w-11 h-11 xs:w-12 xs:h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center shrink-0 shadow-inner group-hover:border-indigo-500/40 transition-colors">
-              <span className="text-base xs:text-lg font-bold text-indigo-300">
-                {company ? company.charAt(0).toUpperCase() : 'C'}
-              </span>
-            </div>
+            {companySlug ? (
+              <Link
+                to={`/companies/${companySlug}`}
+                title={`View ${company} profile`}
+                className="w-11 h-11 xs:w-12 xs:h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center shrink-0 shadow-inner group-hover:border-indigo-500/40 hover:scale-105 transition-all"
+              >
+                <span className="text-base xs:text-lg font-bold text-indigo-300">
+                  {company ? company.charAt(0).toUpperCase() : 'C'}
+                </span>
+              </Link>
+            ) : (
+              <div className="w-11 h-11 xs:w-12 xs:h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center shrink-0 shadow-inner group-hover:border-indigo-500/40 transition-colors">
+                <span className="text-base xs:text-lg font-bold text-indigo-300">
+                  {company ? company.charAt(0).toUpperCase() : 'C'}
+                </span>
+              </div>
+            )}
 
             <div className="space-y-1.5 flex-1 min-w-0">
               {/* Title & Badges */}
@@ -140,7 +164,16 @@ export default function JobCard({
               <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
                 <div className="flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="text-slate-300 font-medium">{company}</span>
+                  {companySlug ? (
+                    <Link
+                      to={`/companies/${companySlug}`}
+                      className="text-slate-300 font-medium hover:text-indigo-300 hover:underline transition-colors"
+                    >
+                      {company}
+                    </Link>
+                  ) : (
+                    <span className="text-slate-300 font-medium">{company}</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-slate-500" />

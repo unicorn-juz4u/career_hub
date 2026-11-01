@@ -1,8 +1,7 @@
-// client/src/components/Navbar.jsx
-// Main navigation bar with role-aware profile menu and responsive mobile toggle
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getNotifications, markAllNotificationsRead } from '../services/api';
 import {
   Briefcase,
   User,
@@ -11,14 +10,48 @@ import {
   Menu,
   X,
   Building,
+  Building2,
   Shield,
   ChevronDown,
+  Bell,
+  Check,
 } from 'lucide-react';
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const fetchNotifs = async () => {
+      try {
+        const res = await getNotifications();
+        if (res && res.notifications) {
+          setNotifications(res.notifications);
+          setUnreadCount(res.unreadCount || 0);
+        }
+      } catch (err) {
+        // silent fail
+      }
+    };
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 10000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
+  const handleClearNotifs = async () => {
+    try {
+      await markAllNotificationsRead();
+      setUnreadCount(0);
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (err) {
+      console.warn('Error clearing notifs:', err);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -90,6 +123,13 @@ export default function Navbar() {
               <Briefcase className="w-4 h-4 text-indigo-400" />
               <span>Browse Jobs</span>
             </Link>
+            <Link
+              to="/companies"
+              className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
+            >
+              <Building2 className="w-4 h-4 text-emerald-400" />
+              <span>Companies</span>
+            </Link>
 
             {/* Authenticated Controls */}
             {isAuthenticated ? (
@@ -105,6 +145,79 @@ export default function Navbar() {
                   <LayoutDashboard className="w-4 h-4 text-indigo-400" />
                   <span>Dashboard</span>
                 </Link>
+
+                {/* Employer Company Branding Link */}
+                {user?.role === 'employer' && (
+                  <Link
+                    to="/dashboard/company"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
+                  >
+                    <Building className="w-3.5 h-3.5" />
+                    <span>Company Profile</span>
+                  </Link>
+                )}
+
+                {/* Notification Bell */}
+                <div className="relative">
+                  <button
+                    onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
+                    className="relative p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700/80"
+                    title="Notifications"
+                    aria-label="View Notifications"
+                  >
+                    <Bell className="w-4 h-4" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Notification Dropdown Popover */}
+                  {notifDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-4 space-y-3 z-50 animate-fade-in">
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Bell className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Notifications</span>
+                        </span>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={handleClearNotifs}
+                            className="text-[11px] text-indigo-400 hover:underline"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="max-h-64 overflow-y-auto space-y-2">
+                        {notifications.length === 0 ? (
+                          <div className="text-center py-6 text-xs text-slate-500">
+                            No notifications yet
+                          </div>
+                        ) : (
+                          notifications.slice(0, 6).map((n) => (
+                            <div
+                              key={n._id || n.id}
+                              className={`p-2.5 rounded-xl border text-xs space-y-0.5 ${
+                                n.isRead
+                                  ? 'bg-slate-950/40 border-slate-800 text-slate-400'
+                                  : 'bg-indigo-950/30 border-indigo-500/30 text-slate-200'
+                              }`}
+                            >
+                              <div className="font-semibold text-white text-[11px]">{n.title}</div>
+                              <p className="line-clamp-2 leading-relaxed text-[11px]">{n.message}</p>
+                              <span className="text-[10px] text-slate-500 block font-mono">
+                                {new Date(n.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* User Name & Sign Out */}
                 <div className="flex items-center gap-3 pl-2 border-l border-slate-800">
@@ -174,6 +287,14 @@ export default function Navbar() {
               <Briefcase className="w-4 h-4 text-indigo-400" />
               <span>Browse Jobs</span>
             </Link>
+            <Link
+              to="/companies"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              <Building2 className="w-4 h-4 text-emerald-400" />
+              <span>Companies Directory</span>
+            </Link>
 
             {isAuthenticated ? (
               <div className="pt-2 border-t border-slate-800 space-y-2">
@@ -191,6 +312,16 @@ export default function Navbar() {
                   <LayoutDashboard className="w-4 h-4" />
                   <span>Go to My Dashboard</span>
                 </Link>
+                {user?.role === 'employer' && (
+                  <Link
+                    to="/dashboard/company"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
+                  >
+                    <Building className="w-4 h-4" />
+                    <span>Company Profile &amp; Branding</span>
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold bg-rose-500/10 text-rose-300 border border-rose-500/20"

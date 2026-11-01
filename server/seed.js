@@ -4,6 +4,9 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('./models/User');
 const Job = require('./models/Job');
+const Application = require('./models/Application');
+const Notification = require('./models/Notification');
+const Company = require('./models/Company');
 
 const seedAdminAndUsers = async () => {
   const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/job_portal';
@@ -13,10 +16,13 @@ const seedAdminAndUsers = async () => {
     await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 3000 });
     console.log('✅ Connected to MongoDB.');
 
-    // Remove existing seed users & jobs to prevent duplicates
-    console.log('🧹 Clearing previous users & jobs...');
+    // Remove existing seed users, jobs, applications, notifications & companies to prevent duplicates
+    console.log('🧹 Clearing previous users, jobs, applications, notifications & companies...');
     await User.deleteMany({});
     await Job.deleteMany({});
+    await Application.deleteMany({});
+    await Notification.deleteMany({});
+    await Company.deleteMany({});
 
     // Demo Data
     const usersToCreate = [
@@ -239,10 +245,131 @@ const seedAdminAndUsers = async () => {
       },
     ];
 
+    const createdJobs = [];
     for (const jobData of jobsToCreate) {
-      await Job.create(jobData);
+      const created = await Job.create(jobData);
+      createdJobs.push(created);
     }
-    console.log(`🎉 Successfully seeded ${jobsToCreate.length} active job listings!`);
+    console.log(`🎉 Successfully seeded ${createdJobs.length} active job listings!`);
+
+    // Seed Applications
+    console.log('Inserting candidate applications & notifications...');
+    const alexRivera = createdUsers['alex@example.com'];
+    const emilyChen = createdUsers['emily@example.com'];
+
+    const app1 = await Application.create({
+      job: createdJobs[0]._id, // Senior Full-Stack Engineer at TechCorp
+      applicant: alexRivera._id,
+      employer: techCorpEmployer._id,
+      resume: 'secure_uploads/resumes/seed-alex-rivera-resume.pdf',
+      coverLetter: 'I am excited to bring my 5 years of MERN stack development to TechCorp Solutions.',
+      status: 'Shortlisted',
+      interviewDate: null,
+      interviewNotes: 'Strong profile, qualified for technical screen.',
+    });
+
+    const app2 = await Application.create({
+      job: createdJobs[1]._id, // Lead Frontend Architect at TechCorp
+      applicant: emilyChen._id,
+      employer: techCorpEmployer._id,
+      resume: 'secure_uploads/resumes/seed-emily-chen-resume.pdf',
+      coverLetter: 'Passionate about frontend performance, design tokens, and modular systems.',
+      status: 'Under Review',
+    });
+
+    const app3 = await Application.create({
+      job: createdJobs[3]._id, // Junior Backend Developer at Cloud Innovate
+      applicant: emilyChen._id,
+      employer: cloudEmployer._id,
+      resume: 'secure_uploads/resumes/seed-emily-chen-resume.pdf',
+      coverLetter: 'I would love to help scale microservices and APIs with your engineering team.',
+      status: 'Interview Scheduled',
+      interviewDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      interviewNotes: 'Technical round scheduled for Thursday 2:00 PM EST via Google Meet.',
+    });
+
+    // Seed Notifications
+    await Notification.create([
+      {
+        recipient: alexRivera._id,
+        sender: techCorpEmployer._id,
+        type: 'APPLICATION_SHORTLISTED',
+        title: 'Application Shortlisted! 🎉',
+        message: 'Your application for "Senior Full-Stack Engineer (React & Node.js)" at TechCorp Solutions has been shortlisted.',
+        application: app1._id,
+        job: createdJobs[0]._id,
+        isRead: false,
+      },
+      {
+        recipient: techCorpEmployer._id,
+        sender: emilyChen._id,
+        type: 'APPLICATION_RECEIVED',
+        title: 'New Candidate Application! 📄',
+        message: 'Emily Chen submitted an application for "Lead Frontend Architect".',
+        application: app2._id,
+        job: createdJobs[1]._id,
+        isRead: false,
+      },
+      {
+        recipient: emilyChen._id,
+        sender: cloudEmployer._id,
+        type: 'INTERVIEW_SCHEDULED',
+        title: 'Interview Scheduled! 📅',
+        message: 'Your interview for "Junior Backend Developer" at Cloud Innovate Labs is scheduled.',
+        application: app3._id,
+        job: createdJobs[3]._id,
+        isRead: false,
+      },
+    ]);
+
+    // Seed Companies
+    console.log('Inserting seed company profiles...');
+    await Company.create([
+      {
+        name: 'TechCorp Solutions',
+        slug: 'techcorp-solutions',
+        logo: '',
+        coverImage: '',
+        industry: 'Software & Cloud Infrastructure',
+        companySize: '201-500',
+        website: 'https://techcorp.example.com',
+        location: 'San Francisco, CA',
+        description: 'Leading enterprise cloud, AI infrastructure and digital product engineering provider.',
+        foundedYear: 2016,
+        socialLinks: {
+          linkedin: 'https://linkedin.com/company/techcorp',
+          twitter: 'https://twitter.com/techcorp',
+          github: 'https://github.com/techcorp',
+          facebook: '',
+        },
+        employer: techCorpEmployer._id,
+        verificationStatus: 'verified',
+        verifiedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      },
+      {
+        name: 'Cloud Innovate Labs',
+        slug: 'cloud-innovate-labs',
+        logo: '',
+        coverImage: '',
+        industry: 'Cloud Consulting & SaaS',
+        companySize: '51-200',
+        website: 'https://cloudinnovate.example.com',
+        location: 'Austin, TX',
+        description: 'Next-generation web applications, microservices architecture, and cloud consultancy.',
+        foundedYear: 2019,
+        socialLinks: {
+          linkedin: 'https://linkedin.com/company/cloudinnovate',
+          twitter: 'https://twitter.com/cloudinnovate',
+          github: 'https://github.com/cloudinnovate',
+          facebook: '',
+        },
+        employer: cloudEmployer._id,
+        verificationStatus: 'pending',
+        verifiedAt: null,
+      },
+    ]);
+
+    console.log(`🎉 Successfully seeded demo applications, notifications, and company profiles!`);
     console.log(`
 ═════════════════════════════════════════════════════════════
 📋 DEMO LOGIN CREDENTIALS:

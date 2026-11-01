@@ -58,3 +58,11 @@ coverage/
 .vite/
 client/.vite/
 .turbo/
+
+# Uploaded Files
+server/secure_uploads/resumes/*
+!server/secure_uploads/resumes/.gitkeep
+server/uploads/*
+!server/uploads/.gitkeep
+!server/uploads/companies/.gitkeep
+

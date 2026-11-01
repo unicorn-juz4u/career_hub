@@ -16,10 +16,19 @@ const connectDB = async () => {
     return true;
   } catch (error) {
     isConnected = false;
-    console.warn(`⚠️ MongoDB Notice: Could not connect to MongoDB at "${mongoUri}".`);
+    const sanitizedUri = mongoUri.replace(/:([^:@]{3,})@/, ':****@');
+    console.warn(`⚠️ MongoDB Notice: Could not connect to MongoDB at "${sanitizedUri}".`);
     console.warn(`   → ${error.message}`);
-    console.warn(`   → The server is continuing in In-Memory fallback mode so you can test immediately.`);
-    console.warn(`   → To persist data permanently, install/start MongoDB or provide a MongoDB Atlas URI in server/.env.`);
+
+    // In production, halt execution to prevent accidental data loss in ephemeral in-memory mode
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_IN_MEMORY_FALLBACK !== 'true') {
+      console.error('❌ CRITICAL ERROR: MongoDB connection failed in PRODUCTION mode.');
+      console.error('   → Halting server to prevent accidental in-memory operation and data loss.');
+      console.error('   → Verify MONGO_URI and MongoDB Atlas IP Network Access whitelist.');
+      process.exit(1);
+    }
+
+    console.warn(`   → Continuing in In-Memory fallback mode for local development/testing.`);
     return false;
   }
 };

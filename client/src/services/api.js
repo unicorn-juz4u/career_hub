@@ -115,4 +115,128 @@ export const deleteJob = async (id) => {
   return response.data;
 };
 
+/* ================= APPLICATION MANAGEMENT APIs ================= */
+
+// Job Seeker: Submit application with PDF resume & cover letter
+export const submitApplication = async (formData) => {
+  const response = await API.post('/applications', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+// Job Seeker: Get list of candidate's own applications with metrics
+export const getMyApplications = async () => {
+  const response = await API.get('/applications/me');
+  return response.data;
+};
+
+// Employer/Admin: Get all applications across employer's postings
+export const getEmployerApplications = async (params = {}) => {
+  const response = await API.get('/applications/employer', { params });
+  return response.data;
+};
+
+// Employer/Admin: Get applications for a specific job listing
+export const getJobApplications = async (jobId) => {
+  const response = await API.get(`/applications/job/${jobId}`);
+  return response.data;
+};
+
+// Private: Get single application details
+export const getApplicationById = async (id) => {
+  const response = await API.get(`/applications/${id}`);
+  return response.data;
+};
+
+// Employer/Admin: Update candidate status (Shortlist, Interview, Hire, Reject)
+export const updateApplicationStatus = async (id, statusData) => {
+  const response = await API.patch(`/applications/${id}/status`, statusData);
+  return response.data;
+};
+
+// Job Seeker / Admin: Withdraw application
+export const deleteApplication = async (id) => {
+  const response = await API.delete(`/applications/${id}`);
+  return response.data;
+};
+
+// Secure resume download helper
+export const getResumeDownloadUrl = (applicationId) => {
+  const baseURL = import.meta.env.VITE_API_URL || '/api';
+  return `${baseURL}/applications/${applicationId}/resume`;
+};
+
+/* ================= NOTIFICATION APIs ================= */
+
+// Get user's notifications & unread counter
+export const getNotifications = async () => {
+  const response = await API.get('/notifications');
+  return response.data;
+};
+
+// Mark single notification as read
+export const markNotificationRead = async (id) => {
+  const response = await API.patch(`/notifications/${id}/read`);
+  return response.data;
+};
+
+// Mark all notifications as read
+export const markAllNotificationsRead = async () => {
+  const response = await API.patch('/notifications/read-all');
+  return response.data;
+};
+
+/* ================= COMPANY & BRANDING APIs ================= */
+
+// Public: Get list of companies with search & filters
+export const getCompanies = async (params = {}) => {
+  const response = await API.get('/companies', { params });
+  return response.data;
+};
+
+// Public: Get single company profile by slug (with active job postings)
+export const getCompanyBySlug = async (slug) => {
+  const response = await API.get(`/companies/${slug}`);
+  return response.data;
+};
+
+// Employer/Admin: Get authenticated employer's company profile
+export const getMyCompany = async () => {
+  const response = await API.get('/companies/me');
+  return response.data;
+};
+
+// Employer/Admin: Create company profile with optional logo/cover upload
+export const createCompany = async (formData) => {
+  const response = await API.post('/companies', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+// Employer/Admin: Update company profile with optional logo/cover upload
+export const updateMyCompany = async (formData) => {
+  const response = await API.put('/companies/me', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+// Admin: Verify or reject company profile
+export const verifyCompany = async (id, status, rejectionReason = '') => {
+  const response = await API.patch(`/companies/${id}/verification`, {
+    status,
+    rejectionReason,
+  });
+  return response.data;
+};
+
 export default API;
+
