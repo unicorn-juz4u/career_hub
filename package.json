@@ -1,0 +1,16 @@
+{
+  "name": "mern-job-portal-template",
+  "version": "1.0.0",
+  "description": "Production-grade MERN Stack Website Template with Tailwind CSS v3 mobile-first responsive architecture",
+  "scripts": {
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"blue.bold,magenta.bold\" \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "client": "npm run dev --prefix client",
+    "server": "npm run dev --prefix server",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "build": "npm run build --prefix client",
+    "seed": "npm run seed --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5"
+  }
+}

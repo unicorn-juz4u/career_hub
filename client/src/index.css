@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Mobile-first base defaults */
+  html {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-100 overflow-x-hidden;
+  }
+
+  /* Responsive typography scaling mobile-first */
+  h1 {
+    @apply text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight;
+  }
+
+  h2 {
+    @apply text-xl xs:text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight;
+  }
+
+  h3 {
+    @apply text-lg xs:text-xl sm:text-2xl font-semibold;
+  }
+}
+
+@layer components {
+  /* Fluid responsive container: mobile-first padding and max-widths */
+  .container-responsive {
+    @apply w-full mx-auto px-4 xs:px-5 sm:px-6 md:px-8 lg:px-10 xl:px-12 max-w-7xl;
+  }
+
+  /* Glassmorphism cards */
+  .glass-card {
+    @apply bg-slate-900/75 backdrop-blur-md border border-slate-800/80 rounded-2xl shadow-xl transition-all duration-300;
+  }
+
+  .glass-card-hover {
+    @apply hover:border-brand-500/50 hover:bg-slate-900/90 hover:shadow-2xl hover:shadow-brand-500/10 hover:-translate-y-0.5;
+  }
+
+  /* Responsive pill badge */
+  .badge-tag {
+    @apply text-xs font-medium px-2.5 py-1 rounded-full bg-slate-800/80 text-slate-300 border border-slate-700/60 inline-flex items-center gap-1.5;
+  }
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
