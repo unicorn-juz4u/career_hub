@@ -44,6 +44,14 @@ export default function Home() {
 
         {/* Call to Actions */}
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Link
+            to="/jobs"
+            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all active:scale-95"
+          >
+            <Briefcase className="w-4 h-4" />
+            <span>Browse Job Openings</span>
+          </Link>
+
           {isAuthenticated ? (
             <Link
               to={
@@ -53,7 +61,7 @@ export default function Home() {
                   ? '/dashboard/employer'
                   : '/dashboard/user'
               }
-              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm border border-slate-700 flex items-center justify-center gap-2 transition-colors"
             >
               <span>Go to My Dashboard</span>
               <ArrowRight className="w-4 h-4" />
@@ -62,16 +70,16 @@ export default function Home() {
             <>
               <Link
                 to="/register"
-                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm border border-slate-700 flex items-center justify-center gap-2 transition-colors"
               >
                 <span>Register Account</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 to="/login"
-                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm border border-slate-700 transition-colors"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-300 font-semibold text-sm border border-slate-800 transition-colors"
               >
-                Sign In to Account
+                Sign In
               </Link>
             </>
           )}

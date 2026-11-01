@@ -8,6 +8,7 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const jobRoutes = require('./routes/jobRoutes');
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/auth',
       dashboard: '/api/dashboard',
+      jobs: '/api/jobs',
     },
   });
 });
@@ -46,6 +48,7 @@ app.get('/', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/jobs', jobRoutes);
 
 // 404 Not Found Handler
 app.use((req, res, next) => {

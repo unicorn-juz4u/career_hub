@@ -83,6 +83,13 @@ export default function Navbar() {
             >
               Home
             </Link>
+            <Link
+              to="/jobs"
+              className="text-sm font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
+            >
+              <Briefcase className="w-4 h-4 text-indigo-400" />
+              <span>Browse Jobs</span>
+            </Link>
 
             {/* Authenticated Controls */}
             {isAuthenticated ? (
@@ -158,6 +165,14 @@ export default function Navbar() {
               className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
             >
               Home
+            </Link>
+            <Link
+              to="/jobs"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              <Briefcase className="w-4 h-4 text-indigo-400" />
+              <span>Browse Jobs</span>
             </Link>
 
             {isAuthenticated ? (

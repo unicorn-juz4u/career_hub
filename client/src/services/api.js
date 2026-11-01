@@ -71,4 +71,48 @@ export const getAdminDashboardData = async () => {
   return response.data;
 };
 
+/* ================= JOB MANAGEMENT APIs ================= */
+
+// Public: Get all open jobs with search, filtering, and pagination
+export const getJobs = async (params = {}) => {
+  const response = await API.get('/jobs', { params });
+  return response.data;
+};
+
+// Private (Employer/Admin): Get jobs created by the current employer with status stats
+export const getMyJobs = async () => {
+  const response = await API.get('/jobs/my-jobs');
+  return response.data;
+};
+
+// Public/Private: Get single job details by ID
+export const getJobById = async (id) => {
+  const response = await API.get(`/jobs/${id}`);
+  return response.data;
+};
+
+// Private (Employer/Admin): Create a new job listing
+export const createJob = async (jobData) => {
+  const response = await API.post('/jobs', jobData);
+  return response.data;
+};
+
+// Private (Employer/Admin): Update an existing job listing
+export const updateJob = async (id, jobData) => {
+  const response = await API.put(`/jobs/${id}`, jobData);
+  return response.data;
+};
+
+// Private (Employer/Admin): Toggle status (open/closed)
+export const toggleJobStatus = async (id, status) => {
+  const response = await API.patch(`/jobs/${id}/status`, { status });
+  return response.data;
+};
+
+// Private (Employer/Admin): Delete job listing
+export const deleteJob = async (id) => {
+  const response = await API.delete(`/jobs/${id}`);
+  return response.data;
+};
+
 export default API;

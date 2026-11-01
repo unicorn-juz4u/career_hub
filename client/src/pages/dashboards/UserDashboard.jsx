@@ -1,6 +1,7 @@
 // client/src/pages/dashboards/UserDashboard.jsx
 // Dedicated dashboard for Job Seekers (role: user)
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getUserDashboardData } from '../../services/api';
 import {
@@ -54,14 +55,24 @@ export default function UserDashboard() {
             </p>
           </div>
 
-          {/* Backend Verification Pill */}
-          <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs space-y-1 self-start sm:self-auto">
-            <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Role Middleware: Verified</span>
-            </div>
-            <div className="text-slate-400 text-[11px]">
-              Access Level: <code className="text-blue-300 font-mono">role === 'user'</code>
+          {/* Action & Verification Pill */}
+          <div className="flex flex-col sm:items-end gap-2.5">
+            <Link
+              to="/jobs"
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-md shadow-blue-600/25 flex items-center justify-center gap-1.5 transition-all active:scale-95"
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Browse All Openings</span>
+            </Link>
+
+            <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs space-y-0.5">
+              <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                <ShieldCheck className="w-4 h-4" />
+                <span>Role Middleware: Verified</span>
+              </div>
+              <div className="text-slate-400 text-[11px]">
+                Access Level: <code className="text-blue-300 font-mono">role === 'user'</code>
+              </div>
             </div>
           </div>
         </div>

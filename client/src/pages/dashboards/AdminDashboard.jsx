@@ -1,8 +1,7 @@
-// client/src/pages/dashboards/AdminDashboard.jsx
-// Dedicated dashboard for Application Owner / Administrator (role: admin)
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getAdminDashboardData } from '../../services/api';
+import { getAdminDashboardData, getMyJobs } from '../../services/api';
 import {
   Shield,
   Users,
@@ -13,19 +12,27 @@ import {
   ShieldCheck,
   BarChart3,
   Layers,
+  ArrowRight,
 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [serverVerification, setServerVerification] = useState(null);
+  const [activeJobsCount, setActiveJobsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Call backend role-protected endpoint to verify server middleware
+  // Call backend role-protected endpoint to verify server middleware and load jobs count
   useEffect(() => {
     const verifyServerAccess = async () => {
       try {
-        const res = await getAdminDashboardData();
+        const [res, jobsRes] = await Promise.all([
+          getAdminDashboardData(),
+          getMyJobs().catch(() => ({ stats: { activeJobs: 0 } })),
+        ]);
         setServerVerification(res);
+        if (jobsRes && jobsRes.stats) {
+          setActiveJobsCount(jobsRes.stats.activeJobs);
+        }
       } catch (err) {
         console.error('Admin role verification error:', err);
       } finally {
@@ -106,8 +113,16 @@ export default function AdminDashboard() {
             <span>Active Jobs</span>
             <Briefcase className="w-4 h-4 text-amber-400" />
           </div>
-          <div className="text-2xl font-bold text-white font-mono">0</div>
-          <span className="text-[11px] text-slate-500 block">Open vacancies (Phase 3)</span>
+          <div className="text-2xl font-bold text-white font-mono">
+            {loading ? '...' : activeJobsCount}
+          </div>
+          <Link
+            to="/jobs"
+            className="text-[11px] text-indigo-400 hover:underline flex items-center gap-1"
+          >
+            <span>Inspect All Openings</span>
+            <ArrowRight className="w-3 h-3" />
+          </Link>
         </div>
 
         <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-1">

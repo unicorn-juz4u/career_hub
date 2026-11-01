@@ -3,6 +3,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('./models/User');
+const Job = require('./models/Job');
 
 const seedAdminAndUsers = async () => {
   const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/job_portal';
@@ -12,9 +13,10 @@ const seedAdminAndUsers = async () => {
     await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 3000 });
     console.log('✅ Connected to MongoDB.');
 
-    // Remove existing seed users to prevent duplicates
-    console.log('🧹 Clearing previous users...');
+    // Remove existing seed users & jobs to prevent duplicates
+    console.log('🧹 Clearing previous users & jobs...');
     await User.deleteMany({});
+    await Job.deleteMany({});
 
     // Demo Data
     const usersToCreate = [
@@ -113,12 +115,134 @@ const seedAdminAndUsers = async () => {
     ];
 
     console.log('Inserting seed accounts...');
+    const createdUsers = {};
     for (const userData of usersToCreate) {
       // User.create triggers the bcrypt password hashing pre-save hook
-      await User.create(userData);
+      const created = await User.create(userData);
+      createdUsers[created.email] = created;
     }
 
     console.log(`🎉 Successfully seeded ${usersToCreate.length} demo accounts!`);
+
+    // Seed Jobs for TechCorp and Cloud Innovate
+    console.log('Inserting initial job listings...');
+    const techCorpEmployer = createdUsers['employer@techcorp.com'];
+    const cloudEmployer = createdUsers['hiring@cloudinnovate.com'];
+
+    const jobsToCreate = [
+      {
+        title: 'Senior Full-Stack Engineer (React & Node.js)',
+        company: 'TechCorp Solutions',
+        location: 'San Francisco, CA / Remote',
+        salary: '$135,000 - $165,000',
+        experience: 'Senior',
+        jobType: 'Full-time',
+        workMode: 'remote',
+        skills: ['React', 'Node.js', 'Express', 'MongoDB', 'Tailwind CSS'],
+        description: 'Lead the architecture and delivery of modern enterprise cloud products.',
+        requirements: [
+          '5+ years building full-stack JavaScript web applications',
+          'Strong expertise with React 18 and Node.js REST APIs',
+          'Experience with MongoDB indexing and aggregation pipelines',
+        ],
+        responsibilities: [
+          'Design and maintain scalable full-stack applications',
+          'Collaborate closely with UX designers and backend engineers',
+          'Champion engineering best practices and peer reviews',
+        ],
+        employer: techCorpEmployer._id,
+        status: 'open',
+      },
+      {
+        title: 'Lead Frontend Architect',
+        company: 'TechCorp Solutions',
+        location: 'San Francisco, CA',
+        salary: '$150,000 - $185,000',
+        experience: 'Lead / Exec',
+        jobType: 'Full-time',
+        workMode: 'hybrid',
+        skills: ['React', 'TypeScript', 'Tailwind CSS', 'Vite'],
+        description: 'Drive the vision and technical strategy for our customer-facing portals.',
+        requirements: [
+          '7+ years in frontend engineering with 2+ years leading teams',
+          'Deep expertise in modern CSS architectures and accessibility',
+        ],
+        responsibilities: [
+          'Define long-term frontend architecture across multiple properties',
+          'Mentor junior and mid-level software engineers',
+        ],
+        employer: techCorpEmployer._id,
+        status: 'open',
+      },
+      {
+        title: 'Cloud Infrastructure & DevOps Engineer',
+        company: 'Cloud Innovate Labs',
+        location: 'Austin, TX',
+        salary: '$125,000 - $155,000',
+        experience: 'Mid Level',
+        jobType: 'Full-time',
+        workMode: 'onsite',
+        skills: ['Docker', 'Kubernetes', 'AWS', 'Terraform', 'CI/CD'],
+        description: 'Build resilient cloud infrastructure and automate deployment pipelines.',
+        requirements: [
+          '3+ years managing production workloads on AWS',
+          'Hands-on experience with Kubernetes and Docker',
+        ],
+        responsibilities: [
+          'Maintain and expand automated CI/CD deployment pipelines',
+          'Implement proactive monitoring and alerting with Prometheus',
+        ],
+        employer: cloudEmployer._id,
+        status: 'open',
+      },
+      {
+        title: 'Junior Backend Developer',
+        company: 'Cloud Innovate Labs',
+        location: 'Austin, TX / Remote',
+        salary: '$75,000 - $95,000',
+        experience: 'Entry Level',
+        jobType: 'Full-time',
+        workMode: 'remote',
+        skills: ['Node.js', 'Express', 'MongoDB', 'REST APIs', 'Git'],
+        description: 'Collaborate with senior engineers to build RESTful web services.',
+        requirements: [
+          'Solid understanding of JavaScript and Node.js fundamentals',
+          'Basic knowledge of Express routing and MongoDB CRUD operations',
+        ],
+        responsibilities: [
+          'Implement API endpoints under senior guidance',
+          'Write unit tests and participate in sprint standups',
+        ],
+        employer: cloudEmployer._id,
+        status: 'open',
+      },
+      {
+        title: 'UI/UX Product Designer',
+        company: 'TechCorp Solutions',
+        location: 'San Francisco, CA / Remote',
+        salary: '$105,000 - $130,000',
+        experience: 'Mid Level',
+        jobType: 'Contract',
+        workMode: 'remote',
+        skills: ['Figma', 'UI/UX Design', 'Design Systems', 'Prototyping'],
+        description: 'Shape the user experience of next-gen SaaS portals.',
+        requirements: [
+          '3+ years designing complex SaaS products and responsive web applications',
+          'Mastery of Figma components and interactive prototyping',
+        ],
+        responsibilities: [
+          'Conduct user interviews and usability testing',
+          'Produce wireframes, clickable mockups, and specs',
+        ],
+        employer: techCorpEmployer._id,
+        status: 'open',
+      },
+    ];
+
+    for (const jobData of jobsToCreate) {
+      await Job.create(jobData);
+    }
+    console.log(`🎉 Successfully seeded ${jobsToCreate.length} active job listings!`);
     console.log(`
 ═════════════════════════════════════════════════════════════
 📋 DEMO LOGIN CREDENTIALS:
